@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	//"fmt"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -24,11 +24,11 @@ type response struct {
 }
 
 func sync(w http.ResponseWriter, r *http.Request) {
+	files := make(map[string]file)
 	json.NewDecoder(r.Body).Decode(files)
 	updates := make(map[string]file)
 	requests := make([]string, 0)
 
-	files := make(map[string]file)
 	for key, serverFile := range st.files {
 		clientFile, prs := files[key]
 		if !prs {
@@ -55,6 +55,8 @@ func sync(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+        fmt.Println(resp)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
