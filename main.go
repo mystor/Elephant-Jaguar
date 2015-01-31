@@ -26,6 +26,23 @@ type response struct {
 func sync(w http.ResponseWriter, r *http.Request) {
 	files := make(map[string]file)
 	json.NewDecoder(r.Body).Decode(files)
+
+	updates, requests := poll(files)
+
+	resp := response{Updates: updates, Requests: requests}
+	js, err := json.Marshal(resp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println(resp)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+func poll(files map[string]file) (map[string]file, []string) {
 	updates := make(map[string]file)
 	requests := make([]string, 0)
 
@@ -49,17 +66,7 @@ func sync(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp := response{Updates: updates, Requests: requests}
-	js, err := json.Marshal(resp)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Println(resp)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
+	return updates, requests
 }
 
 func main() {
