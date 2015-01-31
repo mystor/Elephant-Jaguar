@@ -31,7 +31,6 @@ type response struct {
 
 func sync(w http.ResponseWriter, r *http.Request) {
 	files := make(map[string]file)
-
 	err := json.NewDecoder(r.Body).Decode(&files)
 	if err != nil {
 		log.Fatal(err)
@@ -87,9 +86,23 @@ func poll(files map[string]file) (map[string]file, []string) {
 	return updates, requests
 }
 
+func update(w http.ResponseWriter, r *http.Request) {
+	files := make(map[string]file)
+	err := json.NewDecoder(r.Body).Decode(&files)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for key, value := range files {
+		st.files[key] = value
+	}
+
+	w.Write([]byte(""))
+}
+
 func main() {
 	st = state{files: make(map[string]file)}
-	//http.HandleFunc(`/save/{rest:[a-zA-Z0-9=\-\/\.]+}`, saved)
 	http.HandleFunc("/sync", sync)
+	http.HandleFunc("/update", update)
 	http.ListenAndServe(":8000", nil)
 }
