@@ -95,7 +95,7 @@ def main():
     while True:
         i += 1
         print "Pulsing {}".format(i)
-        pulse("test")
+        pulse(".")
         time.sleep(0.5)
 
 if __name__ == "__main__":
