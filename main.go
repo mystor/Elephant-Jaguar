@@ -68,20 +68,20 @@ func poll(syncReq *SyncRequest) (map[string]File, []string) {
 	update := make(map[string]File)
 	del := make([]string, 0)
 
-	for i := 0; i < PollNum; i++ {
-		for key, clientFile := range syncReq.Added {
-			serverFile, prs := st.Files[key]
-			if !prs {
-				st.Files[key] = clientFile
-			} else {
-				update[key] = serverFile
-			}
-		}
-
-		for key, clientFile := range syncReq.Changed {
+	for key, clientFile := range syncReq.Added {
+		serverFile, prs := st.Files[key]
+		if !prs {
 			st.Files[key] = clientFile
+		} else {
+			update[key] = serverFile
 		}
+	}
 
+	for key, clientFile := range syncReq.Changed {
+		st.Files[key] = clientFile
+	}
+
+	for i := 0; i < PollNum; i++ {
 		for key, clientFile := range syncReq.Unmod {
 			serverFile, prs := st.Files[key]
 			if prs && serverFile.Hash != clientFile.Hash {
