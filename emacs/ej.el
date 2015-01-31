@@ -12,27 +12,29 @@ import base64
 import sys
 
 SERVER = \"http://localhost:8000\"
+file = sys.argv[1]
 ")
 
 (defconst ej-unlock-py (concat ej-header-py "
-file = sys.argv[1]
-request = {'Key': file}
+request = {
+    'Key': file
+}
 
 # Make a request to the unlock server, sending the key to unlock
-requests.post(SERVER+\"/unlock\", data=json.dumps(request))
+print \"Unlock Response:\", requests.post(SERVER+\"/unlock\", data=json.dumps(request)).text
 "))
 
 (defconst ej-watch-py (concat ej-header-py "
-file = sys.argv[1]
-
 # Compute the hash
 m = hashlib.sha1()
 body = sys.stdin.read()
 m.update(body)
 hash = base64.b64encode(m.digest())
 
-
-request = {'Key': file, 'Hash': hash}
+request = {
+    'Key': file,
+    'Target': { 'Hash': hash }
+}
 
 res = json.loads(requests.post(SERVER+\"/watch\", data=json.dumps(request)).text)
 if res['Locked']:
@@ -43,18 +45,19 @@ else:
 "))
 
 (defconst ej-push-py (concat ej-header-py "
-file = sys.argv[1]
-
 m = hashlib.sha1()
 body = sys.stdin.read()
 m.update(body)
 
 request = {
-    'Hash': base64.b64encode(m.digest()),
-    'Data': body
+    'Key': file,
+    'Updated': {
+        'Hash': base64.b64encode(m.digest()),
+        'Data': body
+    }
 }
 
-requests.post(SERVER+\"/push\", data=json.dumps(request))
+print \"Push Response:\", requests.post(SERVER+\"/push\", data=json.dumps(request)).text
 "))
 
 (defvar ej-timer nil)
@@ -62,45 +65,54 @@ requests.post(SERVER+\"/push\", data=json.dumps(request))
 (defvar ej-locked-buffers nil)
 (defvar ej-active-buffers nil)
 
-(defun ej-invoke-py (code)
-  "Invoke the given CODE in the python interpreter."
-  (start-process "python" "*ej-log*" "python" "-c" code (buffer-file-name)))
+(defun ej-invoke-py (outbuffer code)
+  "Outputs to OUTBUFFER.  Invoke the given CODE in the python interpreter."
+  (start-process "python" outbuffer "python" "-c" code (buffer-file-name)))
 
 (defun ej-mode-after-save ()
-  "Unlock the file, and send the current contents to the server."
-  (let ((proc (ej-invoke-py ej-unlock-py)))
-    (process-send-region proc (point-min) (point-max))
-    (process-send-eof proc)
-    (setq ej-locked-buffers (remove (current-buffer) ej-locked-buffers))))
+  "Unlock the file."
+  (ej-invoke-py "*ej-log*" ej-unlock-py)
+  (setq ej-locked-buffers
+        (remove (current-buffer) ej-locked-buffers)))
 
 (defun ej-sync ()
-  "Ej Sync."
+  "Pushed change in buffers to the server & lock with push messages.
+Read changes in unlocked buffers and update buffer."
   ; Deal with any changed buffers
   (dolist (buff ej-changed-list)
-    (add-to-list 'ej-locked-buffers buff)
+    (add-to-list 'ej-locked-buffers buff) ; The buffer is now locked
     (with-current-buffer buff
-      (let ((proc (ej-invoke-py ej-push-py)))
+      (let ((proc (ej-invoke-py "*ej-log*" ej-push-py)))
+        ; Send the entire buffer
         (process-send-region proc (point-min) (point-max))
         (process-send-eof proc))))
 
   ; Sync other buffers
   (dolist (buff ej-active-buffers)
-    (unless (member buff ej-locked-buffers)
+    (unless (member buff ej-locked-buffers) ; TODO(michael): Don't update hidden buffers
       (with-current-buffer buff
-        (let ((proc (start-process "python" (concat "*" (buffer-name buff) "-swap*") "python"
-                                   "-c" ej-watch-py
-                                   (buffer-file-name))))
+
+        (let* ((tbuff (concat "*" (buffer-name buff) "-ej-swap*"))
+               (proc (ej-invoke-py tbuff ej-watch-py)))
+          ; Send the entire buffer
           (process-send-region proc (point-min) (point-max))
           (process-send-eof proc)
+
+          ; Wait for the process to complete
           (when (accept-process-output proc 0.5)
-            (save-excursion
-              (erase-buffer)
-              (with-current-buffer (concat "*" (buffer-name buff) "-swap*")
-                (goto-char (point-min))
-                (if (looking-at "RO\n") ; Read only!
-                    (progn (append-to-buffer buff (+ 3 (point-min)) (point-max))
-                           (unless buffer-read-only (read-only-mode)))
-                  (progn (when buffer-read-only (read-only-mode)))))))))))
+            (save-excursion ; TODO(michael): Should move pointer back to position after chng
+              (if (with-current-buffer tbuff
+                    (goto-char (point-min))
+                    (looking-at "RO\n"))
+                  (progn ; Read only
+                    ; Copy the temp buffer into the current buffer
+                    (erase-buffer)
+                    (goto-char (point-min))
+                    (insert-buffer-substring tbuff 3) ; TODO(michael): This might not work
+
+                    (unless buffer-read-only (read-only-mode)))
+                (progn ; Read/Write
+                  (when buffer-read-only (read-only-mode))))))))))
 
   (setq ej-changed-list nil))
 
