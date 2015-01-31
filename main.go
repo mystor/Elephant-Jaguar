@@ -36,6 +36,10 @@ func livetest(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
+func web(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "webclient.html")
+}
+
 func main() {
 	static = State{Files: make(map[string]File)}
 	http.HandleFunc("/sync", Sync)
@@ -48,6 +52,7 @@ func main() {
 
 	http.HandleFunc("/static", statictest)
 	http.HandleFunc("/live", livetest)
+	http.HandleFunc("/web", web)
 
 	http.ListenAndServe(":8000", nil)
 }
