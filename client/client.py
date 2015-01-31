@@ -6,10 +6,12 @@ import requests
 import os
 import json
 import base64
+import re
 
 SERVER = "http://localhost:8000"
 CACHE = {}
 
+IGNORE_RE = re.compile(r"^\.|~$|^\#");
 
 def pulse(path):
     """
@@ -19,7 +21,7 @@ def pulse(path):
     """
     request = {
         'Changed': {},
-        'Unmodified': {},
+        'Unmod': {},
         'Added': {},
     }
 
@@ -28,11 +30,14 @@ def pulse(path):
     # TODO(michael): Don't crash when you hit a folder
     files = os.listdir(path)
     for f in files:
+        if IGNORE_RE.match(f):
+            continue
+
         mtime = os.stat(os.path.join(path, f)).st_mtime
 
         if f in CACHE:
             if CACHE[f]['mtime'] == mtime:
-                request['Unmodified'][f] = {'Hash': CACHE[f]['Hash']}
+                request['Unmod'][f] = {'Hash': CACHE[f]['Hash']}
                 continue
             else:
                 # Update the CACHE's modified time
@@ -40,7 +45,7 @@ def pulse(path):
                 body, hsh = get_hash(f, path)
 
                 if CACHE[f]['Hash'] == hsh:
-                    request['Unmodified'][f] = {'Hash': hsh}
+                    request['Unmod'][f] = {'Hash': hsh}
                     continue
                 else:
                     # Update the CACHE's hash
@@ -95,7 +100,7 @@ def main():
     while True:
         i += 1
         print "Pulsing {}".format(i)
-        pulse("test")
+        pulse(".")
         time.sleep(0.5)
 
 if __name__ == "__main__":
