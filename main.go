@@ -26,38 +26,11 @@ type response struct {
 
 func sync(w http.ResponseWriter, r *http.Request) {
 	files := make(map[string]file)
-        // x, _ := ioutil.ReadAll(r.Body) fmt.Println(string(x))
-
-        // test := make(map[string]interface{})
-
 
 	err := json.NewDecoder(r.Body).Decode(&files)
+        if err != nil { panic("FUCK THE WORLD"); }
 
-        fmt.Println(err)
-        fmt.Println(files)
-
-	updates := make(map[string]file)
-	requests := make([]string, 0)
-
-	for key, serverFile := range st.files {
-		clientFile, prs := files[key]
-		if !prs {
-			clientFile = file{Data: "", Modified: time.Unix(0, 0)}
-		}
-
-		if serverFile.Modified.After(clientFile.Modified) {
-			updates[key] = serverFile
-		} else if serverFile.Modified.Before(clientFile.Modified) {
-			requests = append(requests, key)
-		}
-	}
-
-	for key, _ := range files {
-		_, prs := st.files[key]
-		if !prs {
-			requests = append(requests, key)
-		}
-	}
+	updates, requests := poll(files)
 
 	resp := response{Updates: updates, Requests: requests}
 	js, err := json.Marshal(resp)
@@ -70,6 +43,41 @@ func sync(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
+}
+
+func poll(files map[string]file) (map[string]file, []string) {
+	updates := make(map[string]file)
+	requests := make([]string, 0)
+
+	for i := 0; i < 5; i++ {
+		for key, serverFile := range st.files {
+			clientFile, prs := files[key]
+			if !prs {
+				clientFile = file{Data: "", Modified: time.Unix(0, 0)}
+			}
+
+			if serverFile.Modified.After(clientFile.Modified) {
+				updates[key] = serverFile
+			} else if serverFile.Modified.Before(clientFile.Modified) {
+				requests = append(requests, key)
+			}
+		}
+
+		for key, _ := range files {
+			_, prs := st.files[key]
+			if !prs {
+				requests = append(requests, key)
+			}
+		}
+
+		if len(updates) > 0 || len(requests) > 0 {
+			break
+		} else {
+			time.Sleep(1 * time.Second)
+		}
+	}
+
+	return updates, requests
 }
 
 func main() {
