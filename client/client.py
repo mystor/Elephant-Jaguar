@@ -5,6 +5,7 @@ import time
 import requests
 import os
 import json
+import base64
 
 SERVER = "http://localhost:8000"
 CACHE = {}
@@ -44,26 +45,29 @@ def pulse(path):
                 else:
                     # Update the CACHE's hash
                     CACHE[f]['Hash'] = hsh
-                    request['Changed'][f] = {'Hash': hsh, 'Body': body}
+                    request['Changed'][f] = {'Hash': hsh, 'Data': body}
         else:
             body, hsh = get_hash(f, path)
             CACHE[f] = {
                 'Hash': hsh,
                 'mtime': mtime
             }
-            request['Added'][f] = {'Hash': hsh, 'Body': body}
+            request['Added'][f] = {'Hash': hsh, 'Data': body}
 
+    print request
     # Perform the sync request
     request = json.dumps(request)
-    res = json.loads(requests.post(SERVER+"/sync", data=request))
+    res = json.loads(requests.post(SERVER+"/sync", data=request).text)
 
-    for f, data in res['Update']:
+    print res
+
+    for f, data in res['Update'].iteritems():
         print "Updating file {}".format(f)
 
-        with open(os.path.join(path, f)) as handle:
+        with open(os.path.join(path, f), "w") as handle:
             handle.write(data['Data'])
         CACHE[f] = {
-            'mtime': os.state(os.path.join(path, f)).st_mtime,
+            'mtime': os.stat(os.path.join(path, f)).st_mtime,
             'Hash': data['Hash'],
         }
 
@@ -82,7 +86,7 @@ def get_hash(f, path):
     with open(os.path.join(path, f)) as f:
         body = f.read()
         m.update(body)
-    return body, m.digest()
+    return body, base64.b64encode(m.digest())
 
 
 def main():
