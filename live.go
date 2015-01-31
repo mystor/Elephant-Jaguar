@@ -60,10 +60,30 @@ func WatchPoll(watchReq WatchRequest) WatchResponse {
 	return WatchResponse{Target: target, Locked: locked}
 }
 
-func Push(w http.ResponseWriter, r *http.Request) {
+type PushRequest struct {
+	Key string
+}
 
+func Push(w http.ResponseWriter, r *http.Request) {
+    Updated File
+    Locked bool
+}
+
+type UnlockRequest struct {
+	Key string
 }
 
 func Unlock(w http.ResponseWriter, r *http.Request) {
+	var unlockReq UnlockRequest
+	err := json.NewDecoder(r.Body).Decode(&unlockReq)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, locked := live.Files[watchReq.Key]
+	if !locked {
+		log.Fatal("trying to unlock a file that is already unlocked")
+	}
+	delete(live, watchReq.Key)
 
+	w.Write([]byte(""))
 }

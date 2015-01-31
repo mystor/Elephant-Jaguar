@@ -13,6 +13,10 @@ type File struct {
 	Hash string
 }
 
+func test(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(`{"key": "foo"}`))
+}
+
 func main() {
 	static = State{Files: make(map[string]File)}
 	http.HandleFunc("/sync", Sync)
@@ -20,6 +24,8 @@ func main() {
 	live = State{Files: make(map[string]File)}
 	http.HandleFunc("/watch", Watch)
 	http.HandleFunc("/push", Push)
+
+	http.HandleFunc("/test", test)
 
 	http.ListenAndServe(":8000", nil)
 }
