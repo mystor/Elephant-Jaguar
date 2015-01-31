@@ -46,23 +46,31 @@ func poll(files map[string]file) (map[string]file, []string) {
 	updates := make(map[string]file)
 	requests := make([]string, 0)
 
-	for key, serverFile := range st.files {
-		clientFile, prs := files[key]
-		if !prs {
-			clientFile = file{Data: "", Modified: time.Unix(0, 0)}
+	for i := 0; i < 5; i++ {
+		for key, serverFile := range st.files {
+			clientFile, prs := files[key]
+			if !prs {
+				clientFile = file{Data: "", Modified: time.Unix(0, 0)}
+			}
+
+			if serverFile.Modified.After(clientFile.Modified) {
+				updates[key] = serverFile
+			} else if serverFile.Modified.Before(clientFile.Modified) {
+				requests = append(requests, key)
+			}
 		}
 
-		if serverFile.Modified.After(clientFile.Modified) {
-			updates[key] = serverFile
-		} else if serverFile.Modified.Before(clientFile.Modified) {
-			requests = append(requests, key)
+		for key, _ := range files {
+			_, prs := st.files[key]
+			if !prs {
+				requests = append(requests, key)
+			}
 		}
-	}
 
-	for key, _ := range files {
-		_, prs := st.files[key]
-		if !prs {
-			requests = append(requests, key)
+		if len(updates) > 0 || len(requests) > 0 {
+			break
+		} else {
+			time.Sleep(1 * time.Second)
 		}
 	}
 
