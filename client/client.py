@@ -96,7 +96,7 @@ def main():
         i += 1
         print "Pulsing {}".format(i)
         pulse("test")
-        time.sleep(5)
+        time.sleep(0.5)
 
 if __name__ == "__main__":
     main()
