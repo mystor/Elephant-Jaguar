@@ -73,8 +73,17 @@ func SyncPoll(syncReq *SyncRequest) SyncResponse {
 			serverFile, prs := static.Files[key]
 			if prs && serverFile.Hash != clientFile.Hash {
 				update[key] = serverFile
-			} else {
+			} else if !prs {
 				del = append(del, key)
+			}
+		}
+
+		for key, serverFile := range static.Files {
+			_, prs1 := syncReq.Added[key]
+			_, prs2 := syncReq.Changed[key]
+			_, prs3 := syncReq.Unmod[key]
+			if !(prs1 || prs2 || prs3) {
+				update[key] = serverFile
 			}
 		}
 
