@@ -24,6 +24,7 @@ func main() {
 	live = State{Files: make(map[string]File)}
 	http.HandleFunc("/watch", Watch)
 	http.HandleFunc("/push", Push)
+	http.HandleFunc("/unlock", Unlock)
 
 	http.HandleFunc("/test", test) // TESTING FUNCTION FOR MICHAEL
 
