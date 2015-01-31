@@ -13,96 +13,96 @@ const (
 	PollTime = 1000
 )
 
-var st state
+var st State
 
-type state struct {
-	files map[string]file
+type State struct {
+	Files map[string]File
 }
 
-type file struct {
-	Data     string
-	Modified time.Time
+type File struct {
+	Data string
+	Hash string
 }
 
-type response struct {
-	Updates  map[string]file
-	Requests []string
+type SyncRequest struct {
+	Added   map[string]File
+	Changed map[string]File
+	Unmod   map[string]File
+}
+
+func NewSyncRequest() *SyncRequest {
+	added := make(map[string]File)
+	changed := make(map[string]File)
+	unmod := make(map[string]File)
+	return &SyncRequest{Changed: changed, Unmod: unmod, Added: added}
+}
+
+type SyncResponse struct {
+	Update map[string]File
+	Delete []string
 }
 
 func sync(w http.ResponseWriter, r *http.Request) {
-	files := make(map[string]file)
-	err := json.NewDecoder(r.Body).Decode(&files)
+	syncReq := NewSyncRequest()
+	err := json.NewDecoder(r.Body).Decode(&syncReq)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	updates, requests := poll(files)
+	update, del := poll(syncReq)
 
-	resp := response{Updates: updates, Requests: requests}
+	resp := SyncResponse{Update: update, Delete: del}
 	js, err := json.Marshal(resp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Println(resp)
+	fmt.Println(st)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 }
 
-func poll(files map[string]file) (map[string]file, []string) {
-	updates := make(map[string]file)
-	requests := make([]string, 0)
+func poll(syncReq *SyncRequest) (map[string]File, []string) {
+	update := make(map[string]File)
+	del := make([]string, 0)
 
 	for i := 0; i < PollNum; i++ {
-		for key, serverFile := range st.files {
-			clientFile, prs := files[key]
+		for key, clientFile := range syncReq.Added {
+			serverFile, prs := st.Files[key]
 			if !prs {
-				clientFile = file{Data: "", Modified: time.Unix(0, 0)}
-			}
-
-			if serverFile.Modified.After(clientFile.Modified) {
-				updates[key] = serverFile
-			} else if serverFile.Modified.Before(clientFile.Modified) {
-				requests = append(requests, key)
+				st.Files[key] = clientFile
+			} else {
+				update[key] = serverFile
 			}
 		}
 
-		for key, _ := range files {
-			_, prs := st.files[key]
-			if !prs {
-				requests = append(requests, key)
+		for key, clientFile := range syncReq.Changed {
+			st.Files[key] = clientFile
+		}
+
+		for key, clientFile := range syncReq.Unmod {
+			serverFile, prs := st.Files[key]
+			if prs && serverFile.Hash != clientFile.Hash {
+				update[key] = serverFile
+			} else {
+				del = append(del, key)
 			}
 		}
 
-		if len(updates) > 0 || len(requests) > 0 {
+		if len(update) > 0 || len(del) > 0 {
 			break
 		} else {
 			time.Sleep(PollTime * time.Millisecond)
 		}
 	}
 
-	return updates, requests
-}
-
-func update(w http.ResponseWriter, r *http.Request) {
-	files := make(map[string]file)
-	err := json.NewDecoder(r.Body).Decode(&files)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for key, value := range files {
-		st.files[key] = value
-	}
-
-	w.Write([]byte(""))
+	return update, del
 }
 
 func main() {
-	st = state{files: make(map[string]file)}
+	st = State{Files: make(map[string]File)}
 	http.HandleFunc("/sync", sync)
-	http.HandleFunc("/update", update)
 	http.ListenAndServe(":8000", nil)
 }
