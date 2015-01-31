@@ -61,12 +61,12 @@ func WatchPoll(watchReq WatchRequest) WatchResponse {
 }
 
 type PushRequest struct {
-	Key string
+	Updated File
+	Locked  bool
 }
 
 func Push(w http.ResponseWriter, r *http.Request) {
-    Updated File
-    Locked bool
+
 }
 
 type UnlockRequest struct {
@@ -79,11 +79,11 @@ func Unlock(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, locked := live.Files[watchReq.Key]
+	_, locked := live.Files[unlockReq.Key]
 	if !locked {
 		log.Fatal("trying to unlock a file that is already unlocked")
 	}
-	delete(live, watchReq.Key)
+	delete(live.Files, unlockReq.Key)
 
 	w.Write([]byte(""))
 }
