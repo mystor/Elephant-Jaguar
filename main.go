@@ -24,11 +24,11 @@ type response struct {
 }
 
 func sync(w http.ResponseWriter, r *http.Request) {
+	json.NewDecoder(r.Body).Decode(files)
 	updates := make(map[string]file)
 	requests := make([]string, 0)
 
 	files := make(map[string]file)
-	json.NewDecoder(r.Body).Decode(files)
 	for key, serverFile := range st.files {
 		clientFile, prs := files[key]
 		if !prs {
@@ -38,6 +38,13 @@ func sync(w http.ResponseWriter, r *http.Request) {
 		if serverFile.modified.After(clientFile.modified) {
 			updates[key] = serverFile
 		} else if serverFile.modified.Before(clientFile.modified) {
+			requests = append(requests, key)
+		}
+	}
+
+	for key, _ := range files {
+		_, prs := st.files[key]
+		if !prs {
 			requests = append(requests, key)
 		}
 	}
@@ -56,6 +63,6 @@ func sync(w http.ResponseWriter, r *http.Request) {
 func main() {
 	st = state{files: make(map[string]file)}
 	//http.HandleFunc(`/save/{rest:[a-zA-Z0-9=\-\/\.]+}`, saved)
-	http.HandleFunc("/syncSaved", sync)
+	http.HandleFunc("/sync", sync)
 	http.ListenAndServe(":8000", nil)
 }
