@@ -48,7 +48,7 @@ func WatchPoll(watchReq WatchRequest) WatchResponse {
 	var locked bool
 
 	for i := 0; i < LivePollNum; i++ {
-		target, locked := live.Files[watchReq.Key]
+		target, locked = live.Files[watchReq.Key]
 
 		if locked && target.Hash != watchReq.Target.Hash {
 			break
