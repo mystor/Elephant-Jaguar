@@ -47,7 +47,26 @@ else:
 (defconst ej-push-py (concat ej-header-py "
 print \"Push Start\"
 m = hashlib.sha1()
+print \"Read Start\"
 body = sys.stdin.read()
+print \"Update Start\"
+m.update(body)
+
+print \"Request Start\"
+request = {
+    'Key': file,
+    'Updated': {
+        'Hash': base64.b64encode(m.digest()),
+        'Data': body
+    }
+}
+print \"Send Push!\"
+print \"Push Response:\", requests.post(SERVER+\"/push\", data=json.dumps(request)).text
+"))
+
+(defconst ej-push-empty-py (concat ej-header-py "
+m = hashlib.sha1()
+body = \"\"
 m.update(body)
 
 request = {
@@ -57,7 +76,7 @@ request = {
         'Data': body
     }
 }
-print \"Send Push!\"
+
 print \"Push Response:\", requests.post(SERVER+\"/push\", data=json.dumps(request)).text
 "))
 
@@ -86,10 +105,13 @@ Read changes in unlocked buffers and update buffer."
   (dolist (buff ej-changed-list)
     (add-to-list 'ej-locked-buffers buff) ; The buffer is now locked
     (with-current-buffer buff
-      (let ((proc (ej-invoke-py "*ej-log*" ej-push-py)))
-        ; Send the entire buffer
-        (process-send-region proc (point-min) (point-max))
-        (process-send-eof proc))))
+      (if (= (point-min) (point-max))
+          (ej-invoke-py "*ej-log*" ej-push-empty-py)
+        (let ((proc (ej-invoke-py "*ej-log*" ej-push-py)))
+          ; (message "-- %d %d" (point-min) (point-max))
+          ; Send the entire buffer
+          (process-send-region proc (point-min) (point-max))
+          (progn (process-send-eof proc))))))
 
   ; Sync other buffers
   (dolist (buff ej-active-buffers)
@@ -117,7 +139,9 @@ Read changes in unlocked buffers and update buffer."
 
                     (unless buffer-read-only (read-only-mode)))
                 (progn ; Read/Write
-                  (when buffer-read-only (message "Rw") (setq buffer-read-only nil))))))))))
+                  (when buffer-read-only
+                    (message "Going Read/Write")
+                    (setq buffer-read-only nil))))))))))
 
   (setq ej-changed-list nil))
 
