@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	StaticPollNum  = 5
-	StaticPollTime = 1000
+	StaticPollNum  = 3
+	StaticPollTime = 500
 )
 
 var static State
