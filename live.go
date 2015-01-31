@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	LivePollNum  = 5
-	LivePollTime = 1000
+	LivePollNum  = 1
+	LivePollTime = 0
 )
 
 var live State
