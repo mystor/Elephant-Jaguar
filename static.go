@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	//"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -103,9 +105,12 @@ type ReadRequest struct {
 }
 
 func Read(w http.ResponseWriter, r *http.Request) {
+	//b, err := ioutil.ReadAll(r.Body)
+	//fmt.Println(string(b))
 	var readReq ReadRequest
 	err := json.NewDecoder(r.Body).Decode(&readReq)
 	if err != nil {
+		fmt.Println("error in read")
 		log.Fatal(err)
 	}
 

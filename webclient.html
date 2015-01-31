@@ -3,31 +3,35 @@
         <titl>Test Client</title>
     </head>
     <body>
-        <form id="input" action="/read" method="GET">
+        <form id="input" action="/read" method="POST">
             <input type="text" size="30" name="name" autocomplete="true">
             <button type="submit">Send</button>
         </form>
 
         <div id="ouput"></div>
         <script>
-            document.getElementById("input").addEventListener("submit", function(e) {
-                e.preventDefault();
-
+            // document.getElementById("input").addEventListener("submit", );
+            function poll() {
                 var r = new XMLHttpRequest();
                 r.onload = injectOutput;
-                var f = {Key: e.currentTarget.name.value,
+                var f = {
+                    Key: document.getElementById("input").name.value,
                     Target: {
-                        Data: "",
-                        Hash: ""
+                        Data: "a",
+                        Hash: "b"
                     }
                 };
-                r.open("GET", "/read", true);
+                r.open("POST", "/read", true);
                 r.send(JSON.stringify(f));
-            });
+            }
 
             function injectOutput() {
                 document.getElementById("ouput").innerHTML = this.responseText;
+
+                setTimeout(poll, 0);
             }
+
+            poll();
         </script>
     </body>
 </html>
