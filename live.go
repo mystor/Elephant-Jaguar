@@ -72,13 +72,13 @@ func Push(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	resp := "push lock failed"
+	resp := "push lock present"
 
 	_, locked := live.Files[pushReq.Key]
 	if !locked {
-		live.Files[pushReq.Key] = pushReq.Updated
-		resp = "push lock success"
+		resp = "push lock aquired"
 	}
+	live.Files[pushReq.Key] = pushReq.Updated
 
 	w.Write([]byte(resp))
 }
