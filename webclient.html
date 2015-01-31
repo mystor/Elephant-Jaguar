@@ -1,0 +1,33 @@
+<html>
+    <head>
+        <titl>Test Client</title>
+    </head>
+    <body>
+        <form id="input" action="/read" method="GET">
+            <input type="text" size="30" name="name" autocomplete="true">
+            <button type="submit">Send</button>
+        </form>
+
+        <div id="ouput"></div>
+        <script>
+            document.getElementById("input").addEventListener("submit", function(e) {
+                e.preventDefault();
+
+                var r = new XMLHttpRequest();
+                r.onload = injectOutput;
+                var f = {Key: e.currentTarget.name.value,
+                    Target: {
+                        Data: "",
+                        Hash: ""
+                    }
+                };
+                r.open("GET", "/read", true);
+                r.send(JSON.stringify(f));
+            });
+
+            function injectOutput() {
+                document.getElementById("ouput").innerHTML = this.responseText;
+            }
+        </script>
+    </body>
+</html>
