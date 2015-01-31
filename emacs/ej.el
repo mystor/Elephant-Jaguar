@@ -45,6 +45,7 @@ else:
 "))
 
 (defconst ej-push-py (concat ej-header-py "
+print \"Push Start\"
 m = hashlib.sha1()
 body = sys.stdin.read()
 m.update(body)
@@ -56,7 +57,7 @@ request = {
         'Data': body
     }
 }
-
+print \"Send Push!\"
 print \"Push Response:\", requests.post(SERVER+\"/push\", data=json.dumps(request)).text
 "))
 
@@ -67,11 +68,14 @@ print \"Push Response:\", requests.post(SERVER+\"/push\", data=json.dumps(reques
 
 (defun ej-invoke-py (outbuffer code)
   "Outputs to OUTBUFFER.  Invoke the given CODE in the python interpreter."
-  (start-process "python" outbuffer "python" "-c" code (buffer-file-name)))
+  (start-process "python" outbuffer "python" "-c" code
+                 (file-name-nondirectory (buffer-file-name))))
 
 (defun ej-mode-after-save ()
   "Unlock the file."
   (ej-invoke-py "*ej-log*" ej-unlock-py)
+  (setq ej-changed-list
+        (remove (current-buffer) ej-changed-list))
   (setq ej-locked-buffers
         (remove (current-buffer) ej-locked-buffers)))
 
@@ -91,8 +95,8 @@ Read changes in unlocked buffers and update buffer."
   (dolist (buff ej-active-buffers)
     (unless (member buff ej-locked-buffers) ; TODO(michael): Don't update hidden buffers
       (with-current-buffer buff
-
-        (let* ((tbuff (concat "*" (buffer-name buff) "-ej-swap*"))
+        (let* ((tbuff (get-buffer-create (concat "*" (buffer-name buff) "-ej-swap*")))
+               (__ignore__ (with-current-buffer tbuff (erase-buffer)))
                (proc (ej-invoke-py tbuff ej-watch-py)))
           ; Send the entire buffer
           (process-send-region proc (point-min) (point-max))
@@ -106,13 +110,14 @@ Read changes in unlocked buffers and update buffer."
                     (looking-at "RO\n"))
                   (progn ; Read only
                     ; Copy the temp buffer into the current buffer
-                    (erase-buffer)
-                    (goto-char (point-min))
-                    (insert-buffer-substring tbuff 3) ; TODO(michael): This might not work
+                    (let ((inhibit-read-only t))
+                      (erase-buffer)
+                      (goto-char (point-min))
+                      (insert-buffer-substring tbuff 4)) ; TODO(michael): This might not work
 
                     (unless buffer-read-only (read-only-mode)))
                 (progn ; Read/Write
-                  (when buffer-read-only (read-only-mode))))))))))
+                  (when buffer-read-only (message "Rw") (setq buffer-read-only nil))))))))))
 
   (setq ej-changed-list nil))
 
