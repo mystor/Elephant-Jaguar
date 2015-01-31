@@ -25,7 +25,7 @@ func main() {
 	http.HandleFunc("/watch", Watch)
 	http.HandleFunc("/push", Push)
 
-	http.HandleFunc("/test", test)
+	http.HandleFunc("/test", test) // TESTING FUNCTION FOR MICHAEL
 
 	http.ListenAndServe(":8000", nil)
 }
