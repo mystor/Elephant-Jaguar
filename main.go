@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 )
 
@@ -13,8 +14,26 @@ type File struct {
 	Hash string
 }
 
-func test(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(`{"key": "foo"}`))
+func statictest(w http.ResponseWriter, r *http.Request) {
+	js, err := json.Marshal(static)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+func livetest(w http.ResponseWriter, r *http.Request) {
+	js, err := json.Marshal(live)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 }
 
 func main() {
@@ -26,7 +45,8 @@ func main() {
 	http.HandleFunc("/push", Push)
 	http.HandleFunc("/unlock", Unlock)
 
-	http.HandleFunc("/test", test) // TESTING FUNCTION FOR MICHAEL
+	http.HandleFunc("/static", statictest)
+	http.HandleFunc("/live", livetest)
 
 	http.ListenAndServe(":8000", nil)
 }
