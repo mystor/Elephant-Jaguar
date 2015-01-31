@@ -44,4 +44,4 @@ def pulse(path):
     res = requests.post(SERVER+"/sync", data=json.dumps(request, default=serialize_date))
     print json.loads(res.text)
 
-pulse(os.environ['HOME'] + "/test")
+pulse("test")
