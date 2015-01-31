@@ -63,11 +63,6 @@ func WatchPoll(watchReq WatchRequest) WatchResponse {
 type PushRequest struct {
 	Key     string
 	Updated File
-	Locked  bool
-}
-
-type PushResponse struct {
-	Locked bool
 }
 
 func Push(w http.ResponseWriter, r *http.Request) {
@@ -77,28 +72,15 @@ func Push(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	var lockPrivs bool
+	resp := "push lock failed"
 
 	_, locked := live.Files[pushReq.Key]
-	if locked == pushReq.Locked {
-		lockPrivs = true
+	if !locked {
 		live.Files[pushReq.Key] = pushReq.Updated
-	} else if locked && !pushReq.Locked {
-		lockPrivs = false
-	} else {
-		log.Fatal("error: one of you is lying about who locked the file")
+		resp = "push lock success"
 	}
 
-	resp := PushResponse{Locked: lockPrivs}
-
-	js, err := json.Marshal(resp)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
+	w.Write([]byte(resp))
 }
 
 type UnlockRequest struct {
@@ -111,11 +93,14 @@ func Unlock(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, locked := live.Files[unlockReq.Key]
-	if !locked {
-		log.Fatal("error: trying to unlock a file that is already unlocked") // SHOULD BE HANDLED BY RESPONSE
-	}
-	delete(live.Files, unlockReq.Key)
 
-	w.Write([]byte(""))
+	resp := "unlock failed"
+
+	_, locked := live.Files[unlockReq.Key]
+	if locked {
+		delete(live.Files, unlockReq.Key)
+		resp = "unlock success"
+	}
+
+	w.Write([]byte(resp))
 }

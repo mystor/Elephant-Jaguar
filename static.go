@@ -96,3 +96,36 @@ func SyncPoll(syncReq *SyncRequest) SyncResponse {
 
 	return SyncResponse{Update: update, Delete: del}
 }
+
+type ReadRequest struct {
+	Key    string
+	Target File
+}
+
+func Read(w http.ResponseWriter, r *http.Request) {
+	var readReq ReadRequest
+	err := json.NewDecoder(r.Body).Decode(&readReq)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp := ReadPoll(readReq)
+
+	w.Write(resp)
+}
+
+func ReadPoll(readReq ReadRequest) []byte {
+	var resp []byte
+	for i := 0; i < StaticPollNum; i++ {
+		serverFile, prs := static.Files[readReq.Key]
+		if !prs {
+			resp = []byte("")
+		} else if serverFile.Hash != readReq.Target.Hash {
+			resp = []byte(serverFile.Data)
+			break
+		}
+		resp = []byte(serverFile.Data)
+		time.Sleep(StaticPollTime * time.Millisecond)
+	}
+	return resp
+}
