@@ -11,7 +11,7 @@ import re
 SERVER = "http://localhost:8000"
 CACHE = {}
 
-IGNORE_RE = re.compile(r"^\.|~$");
+IGNORE_RE = re.compile(r"^\.|~$|^\#");
 
 def pulse(path):
     """
