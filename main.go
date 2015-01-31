@@ -1,11 +1,16 @@
 package main
 
 import (
-        // "io/ioutil"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
+)
+
+const (
+	PollNum  = 5
+	PollTime = 1000
 )
 
 var st state
@@ -28,7 +33,9 @@ func sync(w http.ResponseWriter, r *http.Request) {
 	files := make(map[string]file)
 
 	err := json.NewDecoder(r.Body).Decode(&files)
-        if err != nil { panic("FUCK THE WORLD"); }
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	updates, requests := poll(files)
 
@@ -49,7 +56,7 @@ func poll(files map[string]file) (map[string]file, []string) {
 	updates := make(map[string]file)
 	requests := make([]string, 0)
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < PollNum; i++ {
 		for key, serverFile := range st.files {
 			clientFile, prs := files[key]
 			if !prs {
@@ -73,7 +80,7 @@ func poll(files map[string]file) (map[string]file, []string) {
 		if len(updates) > 0 || len(requests) > 0 {
 			break
 		} else {
-			time.Sleep(1 * time.Second)
+			time.Sleep(PollTime * time.Millisecond)
 		}
 	}
 
