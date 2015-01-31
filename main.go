@@ -39,6 +39,7 @@ func livetest(w http.ResponseWriter, r *http.Request) {
 func main() {
 	static = State{Files: make(map[string]File)}
 	http.HandleFunc("/sync", Sync)
+	http.HandleFunc("/read", Read)
 
 	live = State{Files: make(map[string]File)}
 	http.HandleFunc("/watch", Watch)
