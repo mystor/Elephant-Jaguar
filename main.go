@@ -18,6 +18,8 @@ func main() {
 	http.HandleFunc("/sync", Sync)
 
 	live = State{Files: make(map[string]File)}
+	http.HandleFunc("/watch", Watch)
+	http.HandleFunc("/push", Push)
 
 	http.ListenAndServe(":8000", nil)
 }

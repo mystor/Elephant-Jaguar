@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -40,22 +39,19 @@ func Sync(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	update, del := Poll(syncReq)
+	resp := SyncPoll(syncReq)
 
-	resp := SyncResponse{Update: update, Delete: del}
 	js, err := json.Marshal(resp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Println(static)
-
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 }
 
-func Poll(syncReq *SyncRequest) (map[string]File, []string) {
+func SyncPoll(syncReq *SyncRequest) SyncResponse {
 	update := make(map[string]File)
 	del := make([]string, 0)
 
@@ -89,5 +85,5 @@ func Poll(syncReq *SyncRequest) (map[string]File, []string) {
 		}
 	}
 
-	return update, del
+	return SyncResponse{Update: update, Delete: del}
 }
