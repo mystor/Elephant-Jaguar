@@ -1,6 +1,7 @@
 package main
 
 import (
+        // "io/ioutil"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -25,7 +26,16 @@ type response struct {
 
 func sync(w http.ResponseWriter, r *http.Request) {
 	files := make(map[string]file)
-	json.NewDecoder(r.Body).Decode(files)
+        // x, _ := ioutil.ReadAll(r.Body) fmt.Println(string(x))
+
+        // test := make(map[string]interface{})
+
+
+	err := json.NewDecoder(r.Body).Decode(&files)
+
+        fmt.Println(err)
+        fmt.Println(files)
+
 	updates := make(map[string]file)
 	requests := make([]string, 0)
 

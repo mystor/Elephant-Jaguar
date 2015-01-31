@@ -38,10 +38,12 @@ def pulse(path):
         s = os.stat(os.path.join(path, f))
         mod_time = datetime.fromtimestamp(s.st_mtime)
         request[f] = {
-            'modified': mod_time
+            'Modified': mod_time
         }
+    data = json.dumps(request, default=serialize_date)
+    print data
 
-    res = requests.post(SERVER+"/sync", data=json.dumps(request, default=serialize_date))
+    res = requests.post(SERVER+"/sync", data=data)
     print json.loads(res.text)
 
 pulse("test")
