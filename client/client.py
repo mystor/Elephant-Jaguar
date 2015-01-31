@@ -1,49 +1,98 @@
-"""--"""
+"""-ELEPHANTS == JAGUARS-"""
 
+import hashlib
+import time
 import requests
 import os
 import json
-from datetime import datetime
-
-
-####
-from dateutil.tz import tzutc
-
-UTC = tzutc()
-
-def serialize_date(dt):
-    """
-    Serialize a date/time value into an ISO8601 text representation
-    adjusted (if needed) to UTC timezone.
-
-    For instance:
-    >>> serialize_date(datetime(2012, 4, 10, 22, 38, 20, 604391))
-    '2012-04-10T22:38:20.604391Z'
-    """
-    if dt.tzinfo:
-        dt = dt.astimezone(UTC).replace(tzinfo=None)
-
-    return dt.isoformat() + 'Z'
-####
 
 SERVER = "http://localhost:8000"
+CACHE = {}
+
 
 def pulse(path):
-    request = {}
+    """
+    Perform a single pulse, synchronising data between the client and the
+    server. As long as there aren't concurrent modifications, everything
+    should mostly work out
+    """
+    request = {
+        'Changed': {},
+        'Unmodified': {},
+        'Added': {},
+    }
 
-    # os.stat_float_times(False)
-
+    # Generate the change set
+    # TODO(michael): Recurse through subdirectories
+    # TODO(michael): Don't crash when you hit a folder
     files = os.listdir(path)
     for f in files:
-        s = os.stat(os.path.join(path, f))
-        mod_time = datetime.fromtimestamp(s.st_mtime)
-        request[f] = {
-            'Modified': mod_time
+        mtime = os.stat(os.path.join(path, f)).st_mtime
+
+        if f in CACHE:
+            if CACHE[f]['mtime'] == mtime:
+                request['Unmodified'][f] = {'Hash': CACHE[f]['Hash']}
+                continue
+            else:
+                # Update the CACHE's modified time
+                CACHE[f]['mtime'] = mtime
+                body, hsh = get_hash(f, path)
+
+                if CACHE[f]['Hash'] == hsh:
+                    request['Unmodified'][f] = {'Hash': hsh}
+                    continue
+                else:
+                    # Update the CACHE's hash
+                    CACHE[f]['Hash'] = hsh
+                    request['Changed'][f] = {'Hash': hsh, 'Body': body}
+        else:
+            body, hsh = get_hash(f, path)
+            CACHE[f] = {
+                'Hash': hsh,
+                'mtime': mtime
+            }
+            request['Added'][f] = {'Hash': hsh, 'Body': body}
+
+    # Perform the sync request
+    request = json.dumps(request)
+    res = json.loads(requests.post(SERVER+"/sync", data=request))
+
+    for f, data in res['Update']:
+        print "Updating file {}".format(f)
+
+        with open(os.path.join(path, f)) as handle:
+            handle.write(data['Data'])
+        CACHE[f] = {
+            'mtime': os.state(os.path.join(path, f)).st_mtime,
+            'Hash': data['Hash'],
         }
-    data = json.dumps(request, default=serialize_date)
-    print data
 
-    res = requests.post(SERVER+"/sync", data=data)
-    print json.loads(res.text)
+    for f in res['Delete']:
+        print "Deleting file {}".format(f)
 
-pulse("test")
+        os.remove(os.path.join(path, f))
+
+
+def get_hash(f, path):
+    """
+    Get the sha1 hash and the body of the file passed in (relative to path)
+    """
+    m = hashlib.sha1()
+    body = ""
+    with open(os.path.join(path, f)) as f:
+        body = f.read()
+        m.update(body)
+    return body, m.digest()
+
+
+def main():
+    """ MAIN FUNCTION """
+    i = 0
+    while True:
+        i += 1
+        print "Pulsing {}".format(i)
+        pulse("test")
+        time.sleep(5)
+
+if __name__ == "__main__":
+    main()
