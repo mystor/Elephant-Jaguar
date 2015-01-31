@@ -14,13 +14,13 @@ type state struct {
 }
 
 type file struct {
-	data     string
-	modified time.Time
+	Data     string
+	Modified time.Time
 }
 
 type response struct {
-	updates  map[string]file
-	requests []string
+	Updates  map[string]file
+	Requests []string
 }
 
 func sync(w http.ResponseWriter, r *http.Request) {
@@ -32,12 +32,12 @@ func sync(w http.ResponseWriter, r *http.Request) {
 	for key, serverFile := range st.files {
 		clientFile, prs := files[key]
 		if !prs {
-			clientFile = file{data: "", modified: time.Unix(0, 0)}
+			clientFile = file{Data: "", Modified: time.Unix(0, 0)}
 		}
 
-		if serverFile.modified.After(clientFile.modified) {
+		if serverFile.Modified.After(clientFile.Modified) {
 			updates[key] = serverFile
-		} else if serverFile.modified.Before(clientFile.modified) {
+		} else if serverFile.Modified.Before(clientFile.Modified) {
 			requests = append(requests, key)
 		}
 	}
@@ -49,14 +49,14 @@ func sync(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp := response{updates: updates, requests: requests}
+	resp := response{Updates: updates, Requests: requests}
 	js, err := json.Marshal(resp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-        fmt.Println(resp)
+	fmt.Println(resp)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
