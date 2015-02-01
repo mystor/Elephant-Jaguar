@@ -12,6 +12,7 @@ SERVER = "http://localhost:8000"
 CACHE = {}
 
 IGNORE_RE = re.compile(r"^\.|~$|^\#");
+ACCEPT_RE = re.compile(r"\.go$");
 
 def pulse(path):
     """
@@ -31,6 +32,8 @@ def pulse(path):
     files = os.listdir(path)
     for f in files:
         if IGNORE_RE.match(f):
+            continue
+        if not ACCEPT_RE.match(f):
             continue
 
         mtime = os.stat(os.path.join(path, f)).st_mtime
