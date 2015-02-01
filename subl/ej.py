@@ -154,7 +154,7 @@ import base64
 import threading
 import time
 
-SERVER = "http://localhost:8000"
+SERVER = "http://142.1.242.148:8000"
 
 # class EJLoop(threading.Thread):
 #     def __init__(self, view):
