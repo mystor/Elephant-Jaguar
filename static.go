@@ -113,21 +113,25 @@ func Read(w http.ResponseWriter, r *http.Request) {
 
 	resp := ReadPoll(readReq)
 
-	w.Write(resp)
+	js, err := json.Marshal(resp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 }
 
-func ReadPoll(readReq ReadRequest) []byte {
-	var resp []byte
+func ReadPoll(readReq ReadRequest) File {
+	var target File
 	for i := 0; i < StaticPollNum; i++ {
 		serverFile, prs := static.Files[readReq.Key]
-		if !prs {
-			resp = []byte("")
-		} else if serverFile.Hash != readReq.Target.Hash {
-			resp = []byte(serverFile.Data)
+		target = serverFile
+		if prs && serverFile.Hash != readReq.Target.Hash {
 			break
 		}
-		resp = []byte(serverFile.Data)
 		time.Sleep(StaticPollTime * time.Millisecond)
 	}
-	return resp
+	return target
 }
