@@ -31,9 +31,9 @@ def pulse(path):
     # TODO(michael): Don't crash when you hit a folder
     files = os.listdir(path)
     for f in files:
-        if IGNORE_RE.match(f):
+        if IGNORE_RE.search(f):
             continue
-        if not ACCEPT_RE.match(f):
+        if not ACCEPT_RE.search(f):
             continue
 
         mtime = os.stat(os.path.join(path, f)).st_mtime
