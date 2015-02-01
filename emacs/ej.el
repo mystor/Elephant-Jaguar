@@ -27,7 +27,7 @@ print \"Unlock Response:\", requests.post(SERVER+\"/unlock\", data=json.dumps(re
 (defconst ej-watch-py (concat ej-header-py "
 # Compute the hash
 m = hashlib.sha1()
-body = sys.stdin.read()
+body = sys.argv[2]
 m.update(body)
 hash = base64.b64encode(m.digest())
 
@@ -48,7 +48,7 @@ else:
 print \"Push Start\"
 m = hashlib.sha1()
 print \"Read Start\"
-body = sys.stdin.read()
+body = sys.argv[2]
 print \"Update Start\"
 m.update(body)
 
@@ -85,14 +85,15 @@ print \"Push Response:\", requests.post(SERVER+\"/push\", data=json.dumps(reques
 (defvar ej-locked-buffers nil)
 (defvar ej-active-buffers nil)
 
-(defun ej-invoke-py (outbuffer code)
-  "Outputs to OUTBUFFER.  Invoke the given CODE in the python interpreter."
+(defun ej-invoke-py (outbuffer code extra)
+  "Outputs to OUTBUFFER.  Invoke the given CODE in the python interpreter.
+Passes an EXTRA parameter."
   (start-process "python" outbuffer "python" "-c" code
-                 (file-name-nondirectory (buffer-file-name))))
+                 (file-name-nondirectory (buffer-file-name)) extra))
 
 (defun ej-mode-after-save ()
   "Unlock the file."
-  (ej-invoke-py "*ej-log*" ej-unlock-py)
+  (ej-invoke-py "*ej-log*" ej-unlock-py "")
   (setq ej-changed-list
         (remove (current-buffer) ej-changed-list))
   (setq ej-locked-buffers
@@ -106,12 +107,8 @@ Read changes in unlocked buffers and update buffer."
     (add-to-list 'ej-locked-buffers buff) ; The buffer is now locked
     (with-current-buffer buff
       (if (= (point-min) (point-max))
-          (ej-invoke-py "*ej-log*" ej-push-empty-py)
-        (let ((proc (ej-invoke-py "*ej-log*" ej-push-py)))
-          ; (message "-- %d %d" (point-min) (point-max))
-          ; Send the entire buffer
-          (process-send-region proc (point-min) (point-max))
-          (progn (process-send-eof proc))))))
+          (ej-invoke-py "*ej-log*" ej-push-py "")
+        (ej-invoke-py "*ej-log*" ej-push-py (buffer-string)))))
 
   ; Sync other buffers
   (dolist (buff ej-active-buffers)
@@ -119,13 +116,9 @@ Read changes in unlocked buffers and update buffer."
       (with-current-buffer buff
         (let* ((tbuff (get-buffer-create (concat "*" (buffer-name buff) "-ej-swap*")))
                (__ignore__ (with-current-buffer tbuff (erase-buffer)))
-               (proc (ej-invoke-py tbuff ej-watch-py)))
-          ; Send the entire buffer
-          (process-send-region proc (point-min) (point-max))
-          (process-send-eof proc)
-
+               (proc (ej-invoke-py tbuff ej-watch-py (buffer-string))))
           ; Wait for the process to complete
-          (when (accept-process-output proc 0.5)
+          (when (accept-process-output proc 0.2)
             (save-excursion ; TODO(michael): Should move pointer back to position after chng
               (if (with-current-buffer tbuff
                     (goto-char (point-min))
@@ -141,6 +134,7 @@ Read changes in unlocked buffers and update buffer."
                 (progn ; Read/Write
                   (when buffer-read-only
                     (message "Going Read/Write")
+                    ; (revert-buffer t t)
                     (setq buffer-read-only nil))))))))))
 
   (setq ej-changed-list nil))
@@ -160,8 +154,7 @@ Ignore START, END, LENGTH."
   (add-hook 'after-save-hook 'ej-mode-after-save nil t)
   ; Ensure that the timer is running
   (unless (timerp ej-timer)
-    (setq ej-timer (run-with-timer 0.5 0.5 'ej-sync))))
-
+    (setq ej-timer (run-with-timer 0.2 0.2 'ej-sync))))
 
 (provide 'ej)
 ;;; ej.el ends here
