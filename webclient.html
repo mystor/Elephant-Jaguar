@@ -1,16 +1,43 @@
 <html>
     <head>
-        <titl>Test Client</title>
+        <title>Test Client</title>
+        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+        <style>
+            body {
+                padding-top: 50px;
+                padding-bottom: 50px;
+            }
+            .vertical_divider:after {
+                background: black;
+                width: 1px;
+                content: "";
+                display: block;
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                right: -15px;
+            }
+            .col-xs-3 {
+                height: 100%;
+            }
+        </style>
     </head>
     <body>
-        <form id="input" action="/read" method="POST">
-            <input type="text" size="30" name="name" autocomplete="true">
-            <button type="submit">Send</button>
-        </form>
+        <div class="container">
+            <div class="row">
+                <div class="col-xs-3 vertical_divider">
+                    <h2 style="text-align: right">Elephant Jaguar</h2>
+                    <h5 style="text-align: right">Diverse Pair Programming</h5>
+                    <ul id="menu">
 
-        <div id="ouput"></div>
+                    </ul>
+                </div>
+                <div class="col-xs-9">
+                    <div id="ouput"></div>
+                </div>
+            </div>
+        </div>
         <script>
-            // document.getElementById("input").addEventListener("submit", );
             function poll() {
                 var r = new XMLHttpRequest();
                 r.onload = injectOutput;
@@ -33,5 +60,7 @@
 
             poll();
         </script>
+        <script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
+        <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
     </body>
 </html>
