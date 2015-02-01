@@ -52,7 +52,8 @@ func main() {
 
 	http.HandleFunc("/static", statictest)
 	http.HandleFunc("/live", livetest)
-	http.HandleFunc("/web", web)
+
+	http.HandleFunc("/", web)
 
 	http.ListenAndServe(":8000", nil)
 }
