@@ -6,3 +6,12 @@ func foo() {
     save_everyone();
   }
 }
+ we haveas sahkasdhjkashdkjshdkjasdf
+
+sadjhgfjhasdf
+
+asdfhjasdf
+
+
+asdfasdfgjhasdf
+ ahsdgfjhsadfhj
