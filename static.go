@@ -126,6 +126,11 @@ func Read(w http.ResponseWriter, r *http.Request) {
 func ReadPoll(readReq ReadRequest) File {
 	var target File
 	for i := 0; i < StaticPollNum; i++ {
+		liveFile, livePrs := static.Files[readReq.Key]
+		if livePrs {
+			target = liveFile
+			break
+		}
 		serverFile, prs := static.Files[readReq.Key]
 		target = serverFile
 		if prs && serverFile.Hash != readReq.Target.Hash {
