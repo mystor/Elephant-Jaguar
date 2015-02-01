@@ -1,66 +1,121 @@
 <html>
-    <head>
-        <title>Test Client</title>
-        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
-        <style>
-            body {
-                padding-top: 50px;
-                padding-bottom: 50px;
-            }
-            .vertical_divider:after {
-                background: black;
-                width: 1px;
-                content: "";
-                display: block;
-                position: absolute;
-                top: 0;
-                bottom: 0;
-                right: -15px;
-            }
-            .col-xs-3 {
-                height: 100%;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="row">
-                <div class="col-xs-3 vertical_divider">
-                    <h2 style="text-align: right">Elephant Jaguar</h2>
-                    <h5 style="text-align: right">Diverse Pair Programming</h5>
-                    <ul id="menu">
+  <head>
+    <title>Test Client</title>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+    <style>
+      body {
+        padding-top: 50px;
+        padding-bottom: 50px;
+      }
+      .vertical_divider:after {
+        background: black;
+        width: 1px;
+        content: "";
+        display: block;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: -15px;
+      }
+      .full-height {
+        height: 100%;
+      }
+      #editor {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+      }
+      #menu {
+        list-style-type: none;
+      }
+      .active {
+        padding-left: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-xs-3 vertical_divider full-height">
+          <h2 style="text-align: right">Elephant Jaguar</h2>
+          <h5 style="text-align: right">Diverse Pair Programming</h5>
+          <ul id="menu">
 
-                    </ul>
-                </div>
-                <div class="col-xs-9">
-                    <div id="ouput"></div>
-                </div>
-            </div>
+          </ul>
         </div>
-        <script>
-            function poll() {
-                var r = new XMLHttpRequest();
-                r.onload = injectOutput;
-                var f = {
-                    Key: document.getElementById("input").name.value,
-                    Target: {
-                        Data: "a",
-                        Hash: "b"
-                    }
-                };
-                r.open("POST", "/read", true);
-                r.send(JSON.stringify(f));
+        <div class="col-xs-9 full-height">
+          <div id="editor"></div>
+        </div>
+      </div>
+    </div>
+    <script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.1.3/ace.js"></script>
+    <script>
+      var editor = ace.edit("editor");
+      editor.setReadOnly(true);
+      editor.setHighlightActiveLine(false);
+
+      var hash = "";
+      var currentFile = "baz.txt";
+
+      (function() {
+        var r = new XMLHttpRequest();
+        r.onload = function() {
+          var files = JSON.parse(this.responseText);
+          var menu = document.getElementById("menu");
+          files.forEach(function(file) {
+            var node = document.createElement("li");
+            if (file == currentFile) {
+              node.className = "active";
             }
+            node.textContent = file;
+            node.addEventListener('click', function(e) {
+              [].slice.apply(menu.childNodes).forEach(function(n) {
+                n.className = "";
+              });
+              node.className = "active";
+              hash = "";
+              currentFile = file;
+              poll();
+            });
+            menu.appendChild(node);
+          });
+        }
 
-            function injectOutput() {
-                document.getElementById("ouput").innerHTML = this.responseText;
+        r.open("GET", "/files", true);
+        r.send();
+      })();
 
-                setTimeout(poll, 0);
-            }
+      function poll() {
+        var r = new XMLHttpRequest();
+        var loadingFile = currentFile;
 
-            poll();
-        </script>
-        <script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
-        <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
-    </body>
+        r.onload = function () {
+          if (loadingFile != currentFile) return;
+
+          // Parse the read in text
+          var file = JSON.parse(this.responseText);
+
+          // Save the data read in
+          editor.setValue(file.Data, 1);
+          hash = file.Hash;
+
+          // poll again later
+          setTimeout(poll, 0);
+        };
+
+        var request = {
+          Key: loadingFile,
+          Target: {Hash: hash}
+        };
+        r.open("POST", "/read", true);
+        r.send(JSON.stringify(request));
+      }
+
+      poll();
+    </script>
+  </body>
 </html>
