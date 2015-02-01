@@ -1,16 +1,8 @@
-I'm controlling your computer (!!!!!)
-
-asgdfjhagsdf
-
-
-
-asdf
-asd
-f
-sdaf
-asdf
-
-Hey there how it going! :D
-
-Things we want to do:
-- [ ] shjafgjs
+func foo() {
+  foo := make([]int);
+  if false {
+    kill_everyone();
+  } else {
+    save_everyone();
+  }
+}
